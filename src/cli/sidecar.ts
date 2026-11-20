@@ -61,11 +61,6 @@ export class Sidecar {
       stderr: "inherit",
     });
     void this.readEvents();
-    void this.process.exited.then((code) => {
-      for (const waiter of this.pending.values())
-        waiter.reject(new Error(`OMF agent exited with code ${code}`));
-      this.pending.clear();
-    });
   }
 
   private async readEvents(): Promise<void> {
@@ -89,8 +84,20 @@ export class Sidecar {
           else waiter.resolve(event);
         }
         for (const listener of this.listeners) listener(event);
+        if (event.type === "status" && !requestId) this.resolveStatusWaiter(event);
       }
     }
+  }
+
+  private statusWaiter:
+    | { resolve: (value: SidecarResponse) => void; reject: (error: Error) => void }
+    | undefined;
+
+  private resolveStatusWaiter(event: Record<string, unknown>): void {
+    const waiter = this.statusWaiter;
+    if (!waiter) return;
+    this.statusWaiter = undefined;
+    waiter.resolve(event);
   }
 
   onEvent(listener: (event: Record<string, unknown>) => void): () => void {
@@ -103,6 +110,12 @@ export class Sidecar {
   }
 
   request(command: Record<string, unknown>): Promise<SidecarResponse> {
+    if (command.type === "status") {
+      const { promise, resolve, reject } = Promise.withResolvers<SidecarResponse>();
+      this.statusWaiter = { resolve, reject };
+      this.send(command);
+      return promise;
+    }
     const requestId = `omf-${this.nextId++}`;
     const { promise, resolve, reject } = Promise.withResolvers<SidecarResponse>();
     this.pending.set(requestId, { resolve, reject });

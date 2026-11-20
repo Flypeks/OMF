@@ -25,8 +25,7 @@ export const SkillFrontmatterSchema = z.object({
     .pipe(z.string().min(1).max(64))
     .optional(),
   "argument-hint": z.string().trim().min(1).max(256).optional(),
-  metadata: z.record(z.string(), z.string()).optional(),
-  "allowed-tools": z.string().trim().min(1).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type SkillFrontmatter = z.infer<typeof SkillFrontmatterSchema>;
@@ -91,7 +90,7 @@ function scalar(value: string): string {
     } catch {}
   }
   if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
-    return trimmed.slice(1, -1).replaceAll("''", "'");
+    return trimmed.slice(1).replaceAll("''", "'");
   }
   return trimmed;
 }
@@ -182,42 +181,28 @@ export function parseSkillFile(
       ),
     );
   }
-  if (parsed.data.name.length > 64) {
-    diagnostics.push(
-      diagnostic("warning", location, "name exceeds the 64 character specification limit"),
-    );
-  }
-  if (parsed.data.description.length > 1024) {
-    diagnostics.push(
-      diagnostic("warning", location, "description exceeds the 1024 character specification limit"),
-    );
-  }
-  if (parsed.data.name !== directoryName) {
+
+  const skill: Skill = {
+    name: parsed.data.name,
+    description: parsed.data.description,
+    location,
+    directory,
+    source: options.source ?? "user",
+    trust: options.trust ?? "trusted",
+    ...(parsed.data.version ? { version: parsed.data.version } : {}),
+    ...(parsed.data["argument-hint"] ? { argumentHint: parsed.data["argument-hint"] } : {}),
+    ...(parsed.data.compatibility ? { compatibility: parsed.data.compatibility } : {}),
+  };
+
+  if (directoryName !== parsed.data.name) {
     diagnostics.push(
       diagnostic(
         "warning",
         location,
-        `name "${parsed.data.name}" does not match directory "${directoryName}"; loading it anyway`,
+        `name "${parsed.data.name}" does not match directory "${directoryName}"`,
       ),
     );
   }
 
-  const version = parsed.data.version ?? parsed.data.metadata?.version;
-  const allowedTools = parseAllowedTools(parsed.data["allowed-tools"]);
-  return {
-    skill: {
-      name: parsed.data.name,
-      description: parsed.data.description,
-      location,
-      directory,
-      source: options.source ?? "project",
-      trust: options.trust ?? "trusted",
-      ...(version ? { version } : {}),
-      ...(parsed.data["argument-hint"] ? { argumentHint: parsed.data["argument-hint"] } : {}),
-      ...(parsed.data.compatibility ? { compatibility: parsed.data.compatibility } : {}),
-      ...(allowedTools ? { allowedTools } : {}),
-    },
-    body: (match[2] ?? "").trim(),
-    diagnostics,
-  };
+  return { skill, body: match[2] ?? "", diagnostics };
 }
