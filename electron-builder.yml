@@ -1,6 +1,6 @@
-appId: dev.flecten.app
-productName: Flecten
-copyright: Copyright © 2026 Flecten contributors
+appId: dev.ohmyflecten.app
+productName: Oh My Flecten
+copyright: Copyright © 2026 Oh My Flecten contributors
 
 directories:
   output: release

@@ -78,7 +78,7 @@
   <div class="tb-left">
     <span class="brand">
       <Icon name="mark" size={17} stroke={1.8} />
-      <span translate="no">Flecten</span>
+      <span translate="no">Oh My Flecten</span>
     </span>
     <button
       class="tb-btn"

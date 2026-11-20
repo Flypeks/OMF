@@ -10,6 +10,7 @@ import { createSkillTool, type SkillActivations } from "../skills/tool";
 import { builtinTools } from "../tools/builtin";
 import { ToolRegistry } from "../tools/registry";
 import type { Tool } from "../tools/types";
+import type { AppEcc } from "./ecc";
 import { inputModalities } from "./service-policy";
 
 export interface AppExtensions {
@@ -28,17 +29,28 @@ export async function createExtensions(
   options: McpSessionOptions = {},
   skillActivations: SkillActivations = new Map(),
   projectRoot?: string | null,
+  ecc?: AppEcc,
 ): Promise<AppExtensions> {
   const [skills, mcp] = await Promise.all([
     discoverSkills(cwd, {
       ...(projectRoot === undefined ? {} : { projectRoot }),
       sources: config.skills?.sources,
       ...(config.skills?.trust ? { trust: config.skills.trust } : {}),
+      ...(ecc
+        ? { extraDirectories: [{ directory: ecc.discovery.skillsDir }], limit: 1000 }
+        : {}),
     }),
     connectMcpServers(config.mcp.servers, cwd, options),
   ]);
   return withSkills(
-    { tools: [], sections: [], skills, mcp, skillActivations, dispose: () => mcp.close() },
+    {
+      tools: ecc ? [ecc.tool] : [],
+      sections: ecc?.rules ? [{ id: "ecc-rules", text: ecc.rules }] : [],
+      skills,
+      mcp,
+      skillActivations,
+      dispose: () => mcp.close(),
+    },
     skills,
   );
 }
@@ -54,11 +66,18 @@ export function withSkills(
   return {
     ...extensions,
     skillActivations: activations,
-    tools: [...(skillTool ? [skillTool] : []), ...extensions.mcp.tools],
-    sections: promptSections({
-      skills: active ? renderSkillCatalog(skills.skills) : undefined,
-      mcp: renderMcpInstructions(extensions.mcp.instructions),
-    }),
+    tools: [
+      ...(skillTool ? [skillTool] : []),
+      ...extensions.tools.filter((tool) => tool.source !== "mcp"),
+      ...extensions.mcp.tools,
+    ],
+    sections: [
+      ...extensions.sections.filter((section) => section.id !== "skills" && section.id !== "mcp"),
+      ...promptSections({
+        skills: active ? renderSkillCatalog(skills.skills) : undefined,
+        mcp: renderMcpInstructions(extensions.mcp.instructions),
+      }),
+    ],
     skills,
   };
 }

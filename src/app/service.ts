@@ -16,6 +16,7 @@ import { appInfo } from "./app-info";
 import { createConversation } from "./conversation";
 import { conversationOptions } from "./conversation-options";
 import { projectDictionary } from "./dictionary";
+import { createAppEcc } from "./ecc";
 import { extensionRuntime } from "./extension-runtime";
 import {
   type AppExtensions,
@@ -71,6 +72,7 @@ export async function createAppService(
   onRefresh?: () => void,
 ): Promise<AppService> {
   let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
+  const ecc = await createAppEcc(cwd);
   const voice = voiceService(() => config);
   const ideTerminal = new IdeTerminal(cwd, () => terminalSettings(config));
   const language = translationOptions();
@@ -85,6 +87,7 @@ export async function createAppService(
     projectRoot,
     sources: config.skills?.sources,
     trust: config.skills?.trust,
+    ...(ecc ? { extraDirectories: [{ directory: ecc.discovery.skillsDir }], limit: 1000 } : {}),
   });
   const trustRequired = projectRoot !== null;
   let trustState = projectTrust(cwd, projectRoot);
@@ -100,6 +103,7 @@ export async function createAppService(
       extensionControl.options,
       skillActivations,
       projectRoot,
+      ecc,
     );
   let mcpConfiguration = trusted ? JSON.stringify(config.mcp) : undefined;
   const modules = moduleService(
@@ -172,7 +176,7 @@ export async function createAppService(
       trusted && projectRoot !== null,
       tools,
       runChild,
-      config.subagents?.dirs ?? [],
+      [...(ecc ? [ecc.agents.directory] : []), ...(config.subagents?.dirs ?? [])],
     );
   let subagents = subagentsFor();
   subagentToolCatalog(tools, subagents);
@@ -180,7 +184,7 @@ export async function createAppService(
   const commands = slashCommands(
     cwd,
     () => extensions.skills.skills,
-    () => config.commands?.dirs ?? [],
+    () => [...(ecc ? [ecc.discovery.commandsDir] : []), ...(config.commands?.dirs ?? [])],
     projectRoot !== null,
   );
 
@@ -201,6 +205,7 @@ export async function createAppService(
         extensionControl.options,
         skillActivations,
         projectRoot,
+        ecc,
       );
       mcpConfiguration = nextMcp;
     }
@@ -208,6 +213,7 @@ export async function createAppService(
       projectRoot,
       sources: config.skills?.sources,
       trust: config.skills?.trust,
+      ...(ecc ? { extraDirectories: [{ directory: ecc.discovery.skillsDir }], limit: 1000 } : {}),
     });
     extensions = withSkills(extensions, discovery, trusted);
     tools = registryFor(() => extensions, config, modules.runtime.tool);

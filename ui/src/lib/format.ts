@@ -85,5 +85,5 @@ export function formatTokens(value: number): string {
 /** OS window title (taskbar, window switcher): the open task first, then the app. */
 export function windowTitle(task: string): string {
   const name = task.trim();
-  return name.length > 0 ? `${name} · Flecten` : "Flecten";
+  return name.length > 0 ? `${name} · Oh My Flecten` : "Oh My Flecten";
 }

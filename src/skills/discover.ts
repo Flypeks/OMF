@@ -24,12 +24,19 @@ export interface SkillDiscovery {
   diagnostics: SkillDiagnostic[];
 }
 
+export interface ExtraSkillDirectory {
+  directory: string;
+  source?: SkillSource;
+}
+
 export interface DiscoverSkillsOptions {
   /** Projectless chats load only explicitly located user skill directories. */
   projectRoot?: string | null;
   home?: string;
   sources?: readonly SkillSourceId[] | undefined;
   trust?: Readonly<Record<string, SkillTrust>> | undefined;
+  extraDirectories?: readonly ExtraSkillDirectory[] | undefined;
+  limit?: number | undefined;
 }
 
 export function skillScopes(cwd: string, home: string): SkillScope[] {
@@ -91,10 +98,20 @@ export async function discoverSkills(
   const root = resolve(options.projectRoot ?? cwd);
   const home = resolve(options.home ?? homedir());
   const enabled = new Set(options.sources ?? SKILL_SOURCES);
+  const scopes = [
+    ...skillScopes(root, home),
+    ...(options.extraDirectories ?? []).map((entry) => ({
+      id: "user-agents" as const,
+      directory: entry.directory,
+      source: entry.source ?? ("user" as const),
+      extra: true,
+    })),
+  ];
+  const maxSkills = options.limit ?? MAX_SKILLS;
 
-  for (const scope of skillScopes(root, home)) {
+  for (const scope of scopes) {
     if (options.projectRoot === null && scope.source === "project") continue;
-    if (!enabled.has(scope.id)) continue;
+    if (!("extra" in scope) && !enabled.has(scope.id)) continue;
     if (!(await isDirectory(scope.directory))) continue;
 
     const entries = await readdir(scope.directory, { withFileTypes: true }).catch(
@@ -119,11 +136,11 @@ export async function discoverSkills(
       if (!loaded) continue;
       const trust = options.trust?.[loaded.skill.name];
       const skill = trust === undefined ? loaded.skill : { ...loaded.skill, trust };
-      if (skills.size >= MAX_SKILLS && !skills.has(skill.name)) {
+      if (skills.size >= maxSkills && !skills.has(skill.name)) {
         diagnostics.push({
           level: "error",
           source: skill.location,
-          message: `skill catalog is full at ${MAX_SKILLS} entries; this skill was ignored`,
+          message: `skill catalog is full at ${maxSkills} entries; this skill was ignored`,
         });
         continue;
       }

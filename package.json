@@ -1,9 +1,13 @@
 {
-  "name": "flecten",
-  "version": "0.1.6",
+  "name": "oh-my-flecten",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "omf": "src/cli/omf.ts"
+  },
   "scripts": {
+    "cli": "bun src/cli/omf.ts",
     "connector:x": "bun --env-file=connectors/x-chatgpt/.env src/connectors/x/server.ts",
     "app": "bun run build:ui && bun run build:agent && bun scripts/launch-electron.mjs",
     "app:dev": "bun scripts/dev-desktop.mjs",
@@ -63,6 +67,7 @@
     "@xterm/xterm": "^6.0.0",
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.18",
+    "ecc-universal": "2.2.3",
     "electron-updater": "^6.8.12",
     "marked": "^18.2.1",
     "mdast-util-from-markdown": "^2.1.0",
@@ -78,9 +83,9 @@
     "app-builder-lib>minimatch": "11.0.9",
     "@electron/universal>minimatch": "11.0.9"
   },
-  "description": "Desktop workspace for coding agents: context, verification, and evidence.",
+  "description": "ECC-native desktop and CLI harness for coding agents.",
   "license": "AGPL-3.0-only",
-  "author": "Flecten contributors",
+  "author": "Oh My Flecten contributors",
   "main": "shell/main.mjs",
   "packageManager": "bun@1.4.4",
   "engines": {
