@@ -8,6 +8,8 @@ import { runDelete } from "./delete/run";
 import { deleteSpec } from "./delete/schema";
 import { runDone } from "./done/run";
 import { doneExecutionSchema, doneSpec } from "./done/schema";
+import { runEval } from "./eval/run";
+import { evalSpec } from "./eval/schema";
 import { runEdit } from "./edit/run";
 import { editSpec } from "./edit/schema";
 import { runGlob } from "./glob/run";
@@ -81,6 +83,12 @@ export function builtinTools(imageFocus = false): Tool[] {
       timeoutMs: (args) => (args.timeoutMs ?? 600_000) + 10_000,
       provenance: (args) => ({ source: "shell", ref: `job ${args.id ?? args.op}` }),
       execute: runJobs,
+    }),
+    defineTool({
+      ...evalSpec,
+      mutating: true,
+      timeoutMs: (args) => (args.timeoutMs ?? 60_000) + 10_000,
+      execute: runEval,
     }),
     {
       ...defineTool({ ...doneSpec, mutating: true, execute: runDone }),
