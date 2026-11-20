@@ -1,8 +1,10 @@
 import { materializeEccAgents, type EccAgentMaterialization } from "../ecc/agents";
 import { discoverEcc, type EccDiscovery } from "../ecc/discovery";
+import { eccHooks } from "../ecc/hooks";
 import { loadLanguageRules, loadPortableRules } from "../ecc/rules";
 import { EccConfigSchema } from "../ecc/schema";
 import { createEccTool } from "../ecc/tool";
+import type { HookDefinition } from "../core/hooks/types";
 import type { Tool } from "../tools/types";
 
 export interface AppEcc {
@@ -10,6 +12,7 @@ export interface AppEcc {
   agents: EccAgentMaterialization;
   rules: string;
   tool: Tool;
+  hooks: Record<string, HookDefinition[]>;
 }
 
 export async function createAppEcc(cwd: string): Promise<AppEcc | undefined> {
@@ -30,5 +33,6 @@ export async function createAppEcc(cwd: string): Promise<AppEcc | undefined> {
     agents,
     rules,
     tool: createEccTool(discovery, agents.warnings),
+    hooks: config.hooks ? eccHooks(discovery, config.hooksProfile) : {},
   };
 }

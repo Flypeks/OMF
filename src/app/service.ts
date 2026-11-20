@@ -225,7 +225,7 @@ export async function createAppService(
       system: prompt.system,
       systemParts: prompt.systemParts,
       promptStamp: prompt.stamp,
-      hooks: trusted ? config.hooks : {},
+      hooks: trusted ? { ...ecc?.hooks, ...config.hooks } : {},
       subagentRunnerFactory: subagentModelFactory(subagents.factory, models.config(config, id)),
     }));
   }
@@ -244,7 +244,7 @@ export async function createAppService(
       promptStamp: prompt.stamp,
       limits: config.tools,
       loop: config.loop,
-      ...(trusted ? { hooks: config.hooks } : {}),
+      ...(trusted ? { hooks: { ...ecc?.hooks, ...config.hooks } } : {}),
       permissions,
       approvalTimeoutMs: approvalTimeout(config),
       budgets: runBudgets(config),
